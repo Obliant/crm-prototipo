@@ -124,8 +124,9 @@
   .fmp input:focus, .fmp select:focus{outline:none;border-color:var(--accent)}
   .acoes{display:flex;gap:9px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
   .avisof{font-size:11.5px;color:var(--muted);line-height:1.5;margin:14px 0 0}
-  .card[draggable="true"]{cursor:grab}
+  .card[draggable="true"]{cursor:grab;user-select:none;-webkit-user-select:none}
   .card[draggable="true"]:active{cursor:grabbing}
+  .col-b .card:focus{outline:2px solid var(--accent);outline-offset:1px}
 
   /* ---------- Nota ---------- */
   .nota{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-bright);border-radius:0 12px 12px 0;padding:16px 20px;margin-top:26px}
@@ -354,7 +355,7 @@ function renderBoard(ak){
       var o = ORIGEM[n.origem] || ['—','o-site'];
       var d = dias(n.entrou);
       var alerta = (d !== null && d > 20 && !et.win && !et.lose);
-      h += '<button class="card" draggable="true" ondragstart="pegar(event,'+n.id+')" onclick="abrir('+n.id+')">';
+      h += '<div class="card" role="button" tabindex="0" draggable="true" ondragstart="pegar(event,'+n.id+')" ondragend="largar()" onclick="abrir('+n.id+')" onkeydown="if(event.key===\'Enter\'){abrir('+n.id+')}">';
       h += '<span class="emp">'+n.empresa+'</span>';
       h += '<span class="ct">'+n.contato+(n.cargo && n.cargo!=='—' ? ' · '+n.cargo : '')+'</span>';
       if (ak === 'entrada') { if (n.sugestao && n.sugestao!=='—') h += '<span class="val">→ '+n.sugestao+'</span>'; }
@@ -362,7 +363,7 @@ function renderBoard(ak){
       else if (n.valor) h += '<span class="val">'+brl(n.valor)+'</span>';
       h += '<span class="foot"><span class="tagx '+o[1]+'">'+o[0]+'</span>';
       if (d !== null) h += '<span class="idade'+(alerta?' alerta':'')+'">'+d+'d</span>';
-      h += '</span></button>';
+      h += '</span></div>';
     });
     h += '</div></div>';
   });
@@ -447,6 +448,13 @@ function abrir(id){
   campo('Próximo passo', n.prox);
   campo('Data do próximo passo', dataBR(n.proxData));
   campo('Motivo da perda', n.motivo);
+
+  c += '<label class="fmp" style="margin-top:18px"><b>Mover para</b><select onchange="mover('+n.id+', this.value)">';
+  A.etapas.forEach(function(e){
+    c += '<option value="'+e.id+'"'+(e.id===n.etapa?' selected':'')+'>'+e.nome+'</option>';
+  });
+  c += '</select></label>';
+
   c += '<div class="acoes"><button class="btn primario" onclick="editar('+n.id+')">Editar</button>';
   c += '<button class="btn perigo" onclick="excluir('+n.id+')">Excluir</button></div>';
   document.getElementById('drB').innerHTML = c;
@@ -543,19 +551,29 @@ function excluir(id){
   salvar(); fechar(); render();
 }
 
+// ---------- Mover de etapa ----------
+function mover(id, etapa){
+  var n = NEG.filter(function(x){ return x.id === id; })[0];
+  if (!n || n.etapa === etapa) return;
+  n.etapa = etapa;
+  n.entrou = '2026-08-11';   // reinicia a contagem de dias parados na etapa
+  salvar(); fechar(); render();
+}
+
 // ---------- Arrastar entre etapas ----------
 var arrastando = null;
-function pegar(ev, id){ arrastando = id; if (ev.dataTransfer) { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); } }
+function pegar(ev, id){
+  arrastando = id;
+  if (ev.dataTransfer) { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); }
+}
+function largar(){ setTimeout(function(){ arrastando = null; }, 50); }
 function permitir(ev){ ev.preventDefault(); if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'; }
 function soltar(ev, etapa){
   ev.preventDefault();
-  var id = arrastando || Number(ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
-  var n = NEG.filter(function(x){ return x.id === id; })[0];
+  var id = arrastando;
+  if (!id && ev.dataTransfer) id = Number(ev.dataTransfer.getData('text/plain'));
   arrastando = null;
-  if (!n || n.etapa === etapa) return;
-  n.etapa = etapa;
-  n.entrou = '2026-08-11';
-  salvar(); render();
+  if (id) mover(id, etapa);
 }
 function fechar(){
   document.getElementById('ov').classList.remove('on');
