@@ -107,6 +107,26 @@
   .fechar{appearance:none;background:transparent;border:1px solid var(--hero-line);color:var(--hero-text);border-radius:8px;
     padding:5px 11px;font-size:12px;cursor:pointer;float:right;font-family:inherit}
 
+  /* ---------- Botoes e formulario ---------- */
+  .btn{appearance:none;font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primario{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primario:hover{opacity:.9;color:#fff}
+  .btn.perigo{color:var(--bad)}
+  .btn.perigo:hover{border-color:var(--bad);color:var(--bad)}
+  .areahead{align-items:center}
+
+  .fmp{display:block;margin-bottom:13px}
+  .fmp b{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .fmp input, .fmp select{width:100%;font-family:var(--font-body);font-size:13.5px;padding:9px 11px;border-radius:8px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+  .fmp input:focus, .fmp select:focus{outline:none;border-color:var(--accent)}
+  .acoes{display:flex;gap:9px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+  .avisof{font-size:11.5px;color:var(--muted);line-height:1.5;margin:14px 0 0}
+  .card[draggable="true"]{cursor:grab}
+  .card[draggable="true"]:active{cursor:grabbing}
+
   /* ---------- Nota ---------- */
   .nota{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-bright);border-radius:0 12px 12px 0;padding:16px 20px;margin-top:26px}
   .nota b.lbl{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
@@ -248,9 +268,32 @@ var NEG = [
 ];
 
 var ORIGEM = { pago:['Tráfego pago','o-pago'], indic:['Indicação','o-indic'], prosp:['Prospecção','o-prosp'], site:['Site','o-site'] };
+var FAIXAS = ['Até R$ 50 mi','R$ 50 a 200 mi','R$ 200 a 500 mi','Acima de R$ 500 mi'];
+
+var EXEMPLOS = JSON.parse(JSON.stringify(NEG));
+var CHAVE = 'obliant_crm_proto_v1';
+
+function carregar(){
+  try {
+    var s = localStorage.getItem(CHAVE);
+    if (s) { var d = JSON.parse(s); if (d && d.length) NEG = d; }
+  } catch(e) {}
+}
+function salvar(){
+  try { localStorage.setItem(CHAVE, JSON.stringify(NEG)); } catch(e) {}
+}
+function restaurar(){
+  if (!confirm('Isto apaga tudo que você criou e volta aos exemplos. Continuar?')) return;
+  NEG = JSON.parse(JSON.stringify(EXEMPLOS));
+  salvar(); render();
+}
+function proximoId(){
+  var m = 0; NEG.forEach(function(n){ if (n.id > m) m = n.id; }); return m + 1;
+}
 
 var papel = 'admin';
 var abaAtual = 'entrada';
+var editando = null;
 
 function brl(n){ return 'R$ ' + Math.round(n).toLocaleString('pt-BR'); }
 function dias(iso){ if(!iso||iso==='—') return null; var p=iso.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return Math.round((HOJE-d)/86400000); }
@@ -293,21 +336,25 @@ function render(){
 
 function renderBoard(ak){
   var A = AREAS[ak];
-  var h = '<div class="areahead"><h2>'+A.nome+'</h2><span class="dono">Responsável: '+A.dono+'</span></div>';
+  var h = '<div class="areahead"><h2>'+A.nome+'</h2><span class="dono">Responsável: '+A.dono+'</span>';
+  h += '<span style="margin-left:auto;display:flex;gap:8px">';
+  h += '<button class="btn primario" onclick="novo(\''+ak+'\')">+ Novo</button>';
+  h += '<button class="btn" onclick="restaurar()">Restaurar exemplos</button>';
+  h += '</span></div>';
   h += '<p class="areasub">'+A.sub+'</p><div class="board">';
   A.etapas.forEach(function(et){
     var itens = NEG.filter(function(n){ return n.area===ak && n.etapa===et.id; });
     var soma = itens.reduce(function(s,n){ return s + valorDe(n); }, 0);
-    h += '<div class="col'+(et.win?' win':'')+(et.lose?' lose':'')+'">';
+    h += '<div class="col'+(et.win?' win':'')+(et.lose?' lose':'')+'" ondragover="permitir(event)" ondrop="soltar(event,\''+et.id+'\')">';
     h += '<div class="col-h"><div class="t"><b>'+et.nome+'</b><span class="n">'+itens.length+'</span></div>';
     if (ak !== 'entrada' && soma > 0) h += '<div class="v">'+brl(soma)+'</div>';
     h += '</div><div class="col-b">';
-    if (!itens.length) h += '<div class="vazio">vazio</div>';
+    if (!itens.length) h += '<div class="vazio">arraste um card para cá</div>';
     itens.forEach(function(n){
       var o = ORIGEM[n.origem] || ['—','o-site'];
       var d = dias(n.entrou);
       var alerta = (d !== null && d > 20 && !et.win && !et.lose);
-      h += '<button class="card" onclick="abrir('+n.id+')">';
+      h += '<button class="card" draggable="true" ondragstart="pegar(event,'+n.id+')" onclick="abrir('+n.id+')">';
       h += '<span class="emp">'+n.empresa+'</span>';
       h += '<span class="ct">'+n.contato+(n.cargo && n.cargo!=='—' ? ' · '+n.cargo : '')+'</span>';
       if (ak === 'entrada') { if (n.sugestao && n.sugestao!=='—') h += '<span class="val">→ '+n.sugestao+'</span>'; }
@@ -400,10 +447,115 @@ function abrir(id){
   campo('Próximo passo', n.prox);
   campo('Data do próximo passo', dataBR(n.proxData));
   campo('Motivo da perda', n.motivo);
+  c += '<div class="acoes"><button class="btn primario" onclick="editar('+n.id+')">Editar</button>';
+  c += '<button class="btn perigo" onclick="excluir('+n.id+')">Excluir</button></div>';
   document.getElementById('drB').innerHTML = c;
 
   document.getElementById('ov').classList.add('on');
   document.getElementById('drawer').classList.add('on');
+}
+
+// ---------- Criar e editar ----------
+function novo(area){
+  editar(null, area);
+}
+
+function editar(id, area){
+  var n = id ? NEG.filter(function(x){ return x.id===id; })[0] : null;
+  var ak = n ? n.area : area;
+  var A = AREAS[ak];
+  editando = n ? n.id : null;
+
+  document.getElementById('drEt').textContent = A.nome;
+  document.getElementById('drTit').textContent = n ? 'Editar' : 'Novo registro';
+  document.getElementById('drSub').textContent = n ? n.empresa : 'Preencha os campos abaixo';
+
+  function txt(id,rot,val,ph){ return '<label class="fmp"><b>'+rot+'</b><input id="f_'+id+'" type="text" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'"></label>'; }
+  function num(id,rot,val){ return '<label class="fmp"><b>'+rot+'</b><input id="f_'+id+'" type="number" value="'+(val!==undefined&&val!==null?val:'')+'"></label>'; }
+  function dat(id,rot,val){ return '<label class="fmp"><b>'+rot+'</b><input id="f_'+id+'" type="date" value="'+(val&&val!=='—'?val:'')+'"></label>'; }
+  function sel(id,rot,ops,val){
+    var s = '<label class="fmp"><b>'+rot+'</b><select id="f_'+id+'">';
+    ops.forEach(function(o){ var v=o[0], t=o[1]; s += '<option value="'+v+'"'+(v===val?' selected':'')+'>'+t+'</option>'; });
+    return s + '</select></label>';
+  }
+
+  var c = '';
+  c += sel('etapa','Etapa', A.etapas.map(function(e){ return [e.id, e.nome]; }), n ? n.etapa : A.etapas[0].id);
+  c += txt('empresa','Empresa', n?n.empresa:'', 'Razão social ou nome fantasia');
+  c += txt('contato','Contato', n?n.contato:'', 'Nome da pessoa');
+  c += txt('cargo','Cargo', n?n.cargo:'', 'Ex.: Diretor de Operações');
+  c += sel('fat','Faixa de faturamento', FAIXAS.map(function(f){ return [f,f]; }), n?n.fat:FAIXAS[2]);
+  c += sel('origem','Origem', Object.keys(ORIGEM).map(function(k){ return [k, ORIGEM[k][0]]; }), n?n.origem:'pago');
+
+  if (ak === 'entrada') {
+    c += sel('sugestao','Destino sugerido', [['SMB','SMB'],['Large Enterprise','Large Enterprise'],['Alocação','Alocação'],['—','—']], n?n.sugestao:'SMB');
+    c += txt('campanha','Campanha / palavra-chave', n?n.campanha:'', 'ex.: pmo-terceirizado / exata');
+  } else if (ak === 'aloc') {
+    c += num('mensal','Valor mensal (R$)', n?n.mensal:'');
+    c += num('meses','Duração (meses)', n?n.meses:12);
+    c += dat('renovacao','Data de renovação', n?n.renovacao:'');
+  } else {
+    c += num('valor','Valor (R$)', n?n.valor:'');
+  }
+
+  c += dat('entrou','Entrou na etapa', n?n.entrou:'2026-08-11');
+  c += txt('prox','Próximo passo', n?n.prox:'', 'O que precisa acontecer');
+  c += dat('proxData','Data do próximo passo', n?n.proxData:'');
+  c += txt('motivo','Motivo da perda', n?n.motivo:'', 'Preencher só se Perdido');
+
+  c += '<div class="acoes"><button class="btn primario" onclick="gravar(\''+ak+'\')">Salvar</button>';
+  c += '<button class="btn" onclick="fechar()">Cancelar</button></div>';
+  c += '<p class="avisof">Fica salvo apenas neste navegador. É protótipo — não há banco por trás, e quem abrir o link não verá o que você criou.</p>';
+
+  document.getElementById('drB').innerHTML = c;
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('drawer').classList.add('on');
+}
+
+function v(id){ var e = document.getElementById('f_'+id); return e ? e.value.trim() : ''; }
+function vnum(id){ var x = v(id); return x === '' ? undefined : Number(x); }
+
+function gravar(ak){
+  if (!v('empresa')) { alert('Informe ao menos a empresa.'); return; }
+  var n = editando ? NEG.filter(function(x){ return x.id===editando; })[0] : { id: proximoId(), area: ak };
+  n.area = ak;
+  n.etapa = v('etapa');
+  n.empresa = v('empresa');
+  n.contato = v('contato') || '—';
+  n.cargo = v('cargo');
+  n.fat = v('fat');
+  n.origem = v('origem');
+  if (ak === 'entrada') { n.sugestao = v('sugestao'); n.campanha = v('campanha') || '—'; }
+  else if (ak === 'aloc') { n.mensal = vnum('mensal'); n.meses = vnum('meses') || 12; n.renovacao = v('renovacao'); }
+  else { n.valor = vnum('valor'); }
+  n.entrou = v('entrou');
+  n.prox = v('prox') || '—';
+  n.proxData = v('proxData');
+  n.motivo = v('motivo');
+  if (!editando) NEG.push(n);
+  editando = null;
+  salvar(); fechar(); render();
+}
+
+function excluir(id){
+  if (!confirm('Excluir este registro?')) return;
+  NEG = NEG.filter(function(x){ return x.id !== id; });
+  salvar(); fechar(); render();
+}
+
+// ---------- Arrastar entre etapas ----------
+var arrastando = null;
+function pegar(ev, id){ arrastando = id; if (ev.dataTransfer) { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); } }
+function permitir(ev){ ev.preventDefault(); if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'; }
+function soltar(ev, etapa){
+  ev.preventDefault();
+  var id = arrastando || Number(ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
+  var n = NEG.filter(function(x){ return x.id === id; })[0];
+  arrastando = null;
+  if (!n || n.etapa === etapa) return;
+  n.etapa = etapa;
+  n.entrou = '2026-08-11';
+  salvar(); render();
 }
 function fechar(){
   document.getElementById('ov').classList.remove('on');
@@ -411,6 +563,7 @@ function fechar(){
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') fechar(); });
 
+carregar();
 render();
 </script>
 </body>
