@@ -129,6 +129,26 @@
   .col-b .card:focus{outline:2px solid var(--accent);outline-offset:1px}
   .col.alvo{border-color:var(--accent);background:rgba(188,216,72,.10)}
 
+  /* ---------- Empresas ---------- */
+  tr.linha{cursor:pointer}
+  tr.linha:hover td{background:var(--panel-2)}
+  .bloco{margin-bottom:24px}
+  .bloco .bt{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .vaziop{font-size:12.5px;color:var(--muted);font-style:italic;margin:0}
+  .negl{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .negl b{display:block;font-size:12.5px}
+  .negl span{font-size:11.5px;color:var(--muted)}
+  .negl .vl{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--accent);white-space:nowrap}
+  .negl .vl.bloq{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--font-body);font-size:11.5px}
+  .ativ{border-left:2px solid var(--line);padding:0 0 14px 14px;margin-bottom:2px;position:relative}
+  .ativ:before{content:"";position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--accent-bright);border:2px solid var(--paper)}
+  .ativ .ah{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .ativ .at{font-size:11.5px;font-weight:700;color:var(--ink)}
+  .ativ .ad{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+  .ativ p{margin:4px 0 3px;font-size:13px;line-height:1.5}
+  .ativ .aq{font-size:11px;color:var(--muted);font-style:italic}
+
   .setas{display:flex;gap:5px;margin-top:8px}
   .seta{flex:1;appearance:none;font-family:inherit;font-size:15px;line-height:1;padding:5px 0;border-radius:6px;cursor:pointer;
     background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
@@ -277,24 +297,68 @@ var NEG = [
 
 var ORIGEM = { pago:['Tráfego pago','o-pago'], indic:['Indicação','o-indic'], prosp:['Prospecção','o-prosp'], site:['Site','o-site'] };
 var FAIXAS = ['Até R$ 50 mi','R$ 50 a 200 mi','R$ 200 a 500 mi','Acima de R$ 500 mi'];
+var TIPOS = ['Ligação','Reunião','E-mail','Proposta','Visita','Nota interna'];
+
+// Histórico por empresa — compartilhado entre as áreas, de propósito.
+var ATIV = [
+  {id:1, empresa:'Vallenor Energia', data:'2026-08-06', tipo:'Reunião', quem:'Gestor LE', texto:'Workshop de alinhamento com as três diretorias. Ficou combinado revisitar o escopo da fase 1.'},
+  {id:2, empresa:'Vallenor Energia', data:'2026-07-10', tipo:'Ligação', quem:'Gestor Alocação', texto:'Pediram perfil sênior de PMO para reforçar o time interno. Independente do projeto.'},
+  {id:3, empresa:'Vallenor Energia', data:'2026-06-18', tipo:'Reunião', quem:'Gestor LE', texto:'Diagnóstico inicial. Portfólio com mais de 60 iniciativas, sem priorização formal.'},
+  {id:4, empresa:'Indústria Palmares', data:'2026-08-04', tipo:'E-mail', quem:'Gestor SMB', texto:'Contrato assinado. Kickoff marcado para 18/08.'},
+  {id:5, empresa:'Indústria Palmares', data:'2026-03-02', tipo:'Reunião', quem:'Gestor Alocação', texto:'Início da alocação de um analista de PMO. Renova em setembro.'},
+  {id:6, empresa:'Cerâmica Bandeirante', data:'2026-08-07', tipo:'Ligação', quem:'Admin', texto:'Lead do Google Ads. Confirmado porte e cargo. Direcionado para SMB.'},
+  {id:7, empresa:'Banco Aurora', data:'2026-07-30', tipo:'Proposta', quem:'Gestor LE', texto:'Proposta enviada. Defesa em comitê agendada para agosto.'},
+  {id:8, empresa:'Transportes Iguaçu', data:'2026-07-28', tipo:'Nota interna', quem:'Gestor SMB', texto:'Perderam para estruturação interna. Vale reabrir daqui a 6 meses.'}
+];
 
 var EXEMPLOS = JSON.parse(JSON.stringify(NEG));
+var EXEMPLOS_ATIV = JSON.parse(JSON.stringify(ATIV));
 var CHAVE = 'obliant_crm_proto_v1';
+var CHAVE_A = 'obliant_crm_proto_ativ_v1';
 
 function carregar(){
   try {
     var s = localStorage.getItem(CHAVE);
     if (s) { var d = JSON.parse(s); if (d && d.length) NEG = d; }
+    var a = localStorage.getItem(CHAVE_A);
+    if (a) { var e = JSON.parse(a); if (e && e.length) ATIV = e; }
   } catch(e) {}
 }
 function salvar(){
-  try { localStorage.setItem(CHAVE, JSON.stringify(NEG)); } catch(e) {}
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify(NEG));
+    localStorage.setItem(CHAVE_A, JSON.stringify(ATIV));
+  } catch(e) {}
 }
 function restaurar(){
   if (!confirm('Isto apaga tudo que você criou e volta aos exemplos. Continuar?')) return;
   NEG = JSON.parse(JSON.stringify(EXEMPLOS));
+  ATIV = JSON.parse(JSON.stringify(EXEMPLOS_ATIV));
   salvar(); render();
 }
+
+// ---------- Empresas: derivadas dos negócios ----------
+function empresas(){
+  var m = {};
+  NEG.forEach(function(n){
+    if (!n.empresa) return;
+    if (!m[n.empresa]) m[n.empresa] = { nome:n.empresa, fat:n.fat, contatos:{}, negocios:[], origens:{} };
+    var e = m[n.empresa];
+    if (n.fat) e.fat = n.fat;
+    if (n.contato && n.contato !== '—') e.contatos[n.contato] = n.cargo || '';
+    if (n.origem) e.origens[n.origem] = true;
+    e.negocios.push(n);
+  });
+  return Object.keys(m).sort().map(function(k){ return m[k]; });
+}
+function ativDe(nome){
+  return ATIV.filter(function(a){ return a.empresa === nome; })
+             .sort(function(a,b){ return a.data < b.data ? 1 : -1; });
+}
+function ultimoContato(nome){
+  var a = ativDe(nome); return a.length ? a[0].data : null;
+}
+function vejoArea(area){ return AREAS[area] && AREAS[area].papeis.indexOf(papel) >= 0; }
 function proximoId(){
   var m = 0; NEG.forEach(function(n){ if (n.id > m) m = n.id; }); return m + 1;
 }
@@ -332,6 +396,12 @@ function render(){
     b.onclick = function(){ irPara(k); };
     ab.appendChild(b);
   });
+  var bE = document.createElement('button');
+  bE.className = (abaAtual==='empresas'?'on':'');
+  bE.innerHTML = 'Empresas<span class="cnt">' + empresas().length + '</span>';
+  bE.onclick = function(){ irPara('empresas'); };
+  ab.appendChild(bE);
+
   if (papel === 'admin') {
     var b2 = document.createElement('button');
     b2.className = (abaAtual==='consolidado'?'on':'');
@@ -339,7 +409,9 @@ function render(){
     b2.onclick = function(){ irPara('consolidado'); };
     ab.appendChild(b2);
   }
-  if (abaAtual === 'consolidado') renderConsolidado(); else renderBoard(abaAtual);
+  if (abaAtual === 'consolidado') renderConsolidado();
+  else if (abaAtual === 'empresas') renderEmpresas();
+  else renderBoard(abaAtual);
 }
 
 function renderBoard(ak){
@@ -389,6 +461,94 @@ function notaDaArea(ak){
   if (ak === 'aloc') return '<div class="nota"><b class="lbl">Por que alocação tem valor mensal</b><p>Alocação é receita recorrente. Se registrar o valor cheio do contrato, uma alocação de R$ 18 mil por 12 meses aparece como R$ 216 mil competindo com um projeto de R$ 86 mil que acontece uma vez — e a previsão perde o sentido.</p><p>Por isso o card mostra <b>valor mensal e duração</b>, e a etapa final é <b>Ativo</b>, não "Ganho": o contrato continua vivo, com data de renovação. Perder uma renovação dói mais do que não ganhar uma proposta nova, porque é receita que já era sua.</p></div>';
   return '<div class="nota"><b class="lbl">Sobre as etapas</b><p>Usei <b>Ganho</b> e <b>Perdido</b> em vez de "Concluído". Os dois são conclusões — e um funil que junta os dois esconde exatamente o número que interessa, que é a taxa de conversão.</p><p>O <b>Perdido</b> guarda o motivo. Depois de vinte negócios perdidos, o padrão dos motivos vale mais que qualquer relatório: mostra se o problema é preço, timing, concorrente ou qualificação errada lá atrás.</p></div>';
 }
+
+// ---------- Aba Empresas ----------
+function renderEmpresas(){
+  var lista = empresas();
+  var h = '<div class="areahead"><h2>Empresas</h2><span class="dono">Visível para todos os papéis</span></div>';
+  h += '<p class="areasub">Uma linha por empresa, com todos os negócios e todo o histórico de contato — independente da área. É aqui que se descobre que alguém já falou com essa empresa antes.</p>';
+  h += '<div class="tw"><table><thead><tr><th>Empresa</th><th>Faturamento</th><th>Contatos</th><th>Negócios</th><th>Último contato</th></tr></thead><tbody>';
+  lista.forEach(function(e){
+    var uc = ultimoContato(e.nome);
+    var d = uc ? dias(uc) : null;
+    var nomes = Object.keys(e.contatos);
+    h += '<tr class="linha" onclick="abrirEmpresa(\''+e.nome.replace(/'/g,"\\'")+'\')">';
+    h += '<td><b>'+e.nome+'</b></td>';
+    h += '<td>'+(e.fat||'—')+'</td>';
+    h += '<td>'+(nomes.length ? nomes.join(', ') : '—')+'</td>';
+    h += '<td>'+e.negocios.length+'</td>';
+    h += '<td>'+(uc ? dataBR(uc)+' · há '+d+'d' : '<span style="color:var(--warn)">sem registro</span>')+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<div class="nota"><b class="lbl">Por que o histórico é compartilhado entre as áreas</b><p>Valores continuam restritos — o gestor de SMB não vê quanto vale o negócio de Large Enterprise. Mas o <b>histórico de contato é visível para todos</b>, e isso é deliberado.</p><p>Sem isso, dois gestores ligam para a mesma empresa na mesma semana sem saber, e quem atende do outro lado conclui que a Obliant não conversa internamente. É o erro que mais custa credibilidade em empresa que vende mais de uma coisa.</p><p>Repare na <b>Vallenor Energia</b>: ela tem um projeto em Large Enterprise e uma alocação em andamento. São dois gestores diferentes falando com o mesmo cliente.</p></div>';
+  document.getElementById('conteudo').innerHTML = h;
+}
+
+function abrirEmpresa(nome){
+  var e = empresas().filter(function(x){ return x.nome === nome; })[0];
+  if (!e) return;
+  document.getElementById('drEt').textContent = 'Empresa';
+  document.getElementById('drTit').textContent = e.nome;
+  document.getElementById('drSub').textContent = e.fat || '';
+
+  var c = '';
+  var nomes = Object.keys(e.contatos);
+  c += '<div class="bloco"><b class="bt">Contatos</b>';
+  if (!nomes.length) c += '<p class="vaziop">Nenhum contato registrado.</p>';
+  nomes.forEach(function(n){ c += '<div class="campo"><b>'+n+'</b><span>'+(e.contatos[n]||'—')+'</span></div>'; });
+  c += '</div>';
+
+  c += '<div class="bloco"><b class="bt">Negócios</b>';
+  e.negocios.forEach(function(n){
+    var A = AREAS[n.area];
+    var et = A.etapas.filter(function(x){ return x.id===n.etapa; })[0];
+    var podeVer = vejoArea(n.area);
+    var val = '—';
+    if (podeVer) { val = n.mensal ? brl(n.mensal)+'/mês' : (n.valor ? brl(n.valor) : '—'); }
+    c += '<div class="negl"><div><b>'+A.nome+'</b><span>'+(et?et.nome:'')+'</span></div>';
+    c += '<span class="vl'+(podeVer?'':' bloq')+'">'+(podeVer ? val : 'outra área')+'</span></div>';
+  });
+  c += '</div>';
+
+  c += '<div class="bloco"><b class="bt">Histórico</b>';
+  c += '<button class="btn primario" style="width:100%;margin-bottom:12px" onclick="formAtiv(\''+nome.replace(/'/g,"\\'")+'\')">+ Registrar contato</button>';
+  var as = ativDe(nome);
+  if (!as.length) c += '<p class="vaziop">Nenhum registro ainda.</p>';
+  as.forEach(function(a){
+    c += '<div class="ativ"><div class="ah"><span class="at">'+a.tipo+'</span><span class="ad">'+dataBR(a.data)+'</span></div>';
+    c += '<p>'+a.texto+'</p><span class="aq">'+a.quem+'</span></div>';
+  });
+  c += '</div>';
+
+  document.getElementById('drB').innerHTML = c;
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('drawer').classList.add('on');
+}
+
+function formAtiv(nome){
+  var c = '<div class="bloco"><b class="bt">Registrar contato · '+nome+'</b>';
+  c += '<label class="fmp"><b>Tipo</b><select id="f_tipo">';
+  TIPOS.forEach(function(t){ c += '<option value="'+t+'">'+t+'</option>'; });
+  c += '</select></label>';
+  c += '<label class="fmp"><b>Data</b><input id="f_data" type="date" value="2026-08-12"></label>';
+  c += '<label class="fmp"><b>O que aconteceu</b><input id="f_texto" type="text" placeholder="Ex.: reunião de diagnóstico, ficou de retornar dia 20"></label>';
+  c += '<div class="acoes"><button class="btn primario" onclick="gravarAtiv(\''+nome.replace(/'/g,"\\'")+'\')">Salvar</button>';
+  c += '<button class="btn" onclick="abrirEmpresa(\''+nome.replace(/'/g,"\\'")+'\')">Cancelar</button></div></div>';
+  document.getElementById('drB').innerHTML = c;
+}
+
+function gravarAtiv(nome){
+  var texto = v('texto');
+  if (!texto) { alert('Escreva o que aconteceu.'); return; }
+  var m = 0; ATIV.forEach(function(a){ if (a.id > m) m = a.id; });
+  ATIV.push({ id:m+1, empresa:nome, data:v('data')||'2026-08-12', tipo:v('tipo'), quem:PAPEL_NOME[papel]||'—', texto:texto });
+  salvar();
+  abrirEmpresa(nome);
+  if (abaAtual === 'empresas') renderEmpresas();
+}
+
+var PAPEL_NOME = { admin:'Admin', smb:'Gestor SMB', le:'Gestor Large Enterprise', aloc:'Gestor Alocação' };
 
 function renderConsolidado(){
   var abertas = NEG.filter(function(n){ return n.area!=='entrada' && ['ganho','perdido','ativo'].indexOf(n.etapa)<0; });
