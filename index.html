@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obliant · CRM — protótipo</title>
+<style>
+  :root{
+    --ink:#12181F; --paper:#F3F4EF; --panel:#FFFFFF; --panel-2:#F8F9F5;
+    --accent:#748029; --accent-bright:#BCD848; --line:#DEE1D6; --muted:#5B6472;
+    --hero-bg:#0C1119; --hero-text:#F3F4EF; --hero-line:rgba(243,244,239,.14); --hero-accent:#D6E878; --hero-muted:#9AA3AE;
+    --ok:#2E7D32; --warn:#B45309; --bad:#B3261E;
+    --font-head:Georgia,'Iowan Old Style','Palatino Linotype',serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:ui-monospace,'SF Mono',Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#EDEFE7; --paper:#12161C; --panel:#191F27; --panel-2:#1E2530; --accent:#BCD848; --accent-bright:#D6E878; --line:#2B323C; --muted:#9AA3AE; --ok:#7CC47F; --warn:#F0B15E; --bad:#F09B94; }
+  }
+  :root[data-theme="dark"]{ --ink:#EDEFE7; --paper:#12161C; --panel:#191F27; --panel-2:#1E2530; --accent:#BCD848; --accent-bright:#D6E878; --line:#2B323C; --muted:#9AA3AE; --ok:#7CC47F; --warn:#F0B15E; --bad:#F09B94; }
+  :root[data-theme="light"]{ --ink:#12181F; --paper:#F3F4EF; --panel:#FFFFFF; --panel-2:#F8F9F5; --accent:#748029; --accent-bright:#BCD848; --line:#DEE1D6; --muted:#5B6472; --ok:#2E7D32; --warn:#B45309; --bad:#B3261E; }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);font-variant-numeric:tabular-nums}
+
+  /* ---------- Topo ---------- */
+  .top{background:var(--hero-bg);color:var(--hero-text);padding:16px 22px}
+  .top-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .mark{width:28px;height:28px;border-radius:7px;background:var(--hero-accent);flex:0 0 auto}
+  .brandt strong{display:block;font-family:var(--font-head);font-size:16px}
+  .brandt span{display:block;font-size:11px;color:var(--hero-muted);margin-top:1px}
+  .top .proto{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .top label{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--hero-muted)}
+  select{font-family:var(--font-body);font-size:13px;padding:7px 11px;border-radius:8px;border:1px solid var(--hero-line);
+    background:rgba(243,244,239,.06);color:var(--hero-text)}
+  select option{background:#1a1f28;color:#F3F4EF}
+
+  /* ---------- Abas ---------- */
+  .abas{background:var(--panel);border-bottom:1px solid var(--line);padding:0 22px;overflow-x:auto}
+  .abas-in{max-width:1400px;margin:0 auto;display:flex;gap:4px}
+  .abas button{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+    font-family:var(--font-body);font-size:13.5px;font-weight:600;color:var(--muted);padding:13px 15px;cursor:pointer;white-space:nowrap}
+  .abas button:hover{color:var(--ink)}
+  .abas button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .abas button .cnt{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:5px}
+
+  /* ---------- Área ---------- */
+  .wrap{max-width:1400px;margin:0 auto;padding:20px 22px 60px}
+  .areahead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+  .areahead h2{font-family:var(--font-head);font-weight:400;font-size:22px;margin:0}
+  .areahead .dono{font-size:12.5px;color:var(--muted)}
+  .areasub{font-size:12.5px;color:var(--muted);margin:0 0 18px;max-width:70ch;line-height:1.55}
+
+  /* ---------- Kanban ---------- */
+  .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+  .col{flex:0 0 262px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;max-height:72vh}
+  .col-h{padding:11px 13px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel-2);border-radius:12px 12px 0 0}
+  .col-h .t{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .col-h b{font-size:12.5px}
+  .col-h .n{font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+  .col-h .v{font-family:var(--font-mono);font-size:11px;color:var(--accent);margin-top:4px;font-weight:700}
+  .col.win .col-h{border-bottom-color:var(--ok)} .col.win .col-h b{color:var(--ok)}
+  .col.lose .col-h{border-bottom-color:var(--bad)} .col.lose .col-h b{color:var(--bad)}
+  .col-b{padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer;text-align:left;width:100%;font-family:inherit}
+  .card:hover{border-color:var(--accent)}
+  .card .emp{font-size:13px;font-weight:600;line-height:1.3;display:block}
+  .card .ct{font-size:11.5px;color:var(--muted);margin-top:2px;display:block}
+  .card .val{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;margin-top:7px;display:block}
+  .card .foot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
+  .tagx{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:999px;white-space:nowrap}
+  .o-pago{background:rgba(188,216,72,.25);color:var(--accent)}
+  .o-indic{background:rgba(37,99,235,.13);color:#2563EB}
+  .o-prosp{background:rgba(180,83,9,.13);color:var(--warn)}
+  .o-site{background:rgba(91,100,114,.15);color:var(--muted)}
+  .idade{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .idade.alerta{color:var(--warn);font-weight:700}
+  .vazio{font-size:12px;color:var(--muted);padding:14px 4px;text-align:center;font-style:italic}
+
+  /* ---------- Consolidado ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+  .kpi .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .kpi .v{font-family:var(--font-mono);font-size:23px;font-weight:700;color:var(--accent);margin-top:5px}
+  .kpi .s{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+  th{text-align:left;font-family:var(--font-mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:0}
+  td.num{font-family:var(--font-mono);text-align:right;white-space:nowrap}
+
+  /* ---------- Painel lateral ---------- */
+  .ov{position:fixed;inset:0;background:rgba(12,17,25,.5);display:none;z-index:60}
+  .ov.on{display:block}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);background:var(--paper);border-left:1px solid var(--line);
+    z-index:61;transform:translateX(100%);transition:transform .18s ease;overflow-y:auto}
+  .drawer.on{transform:translateX(0)}
+  .dr-h{background:var(--hero-bg);color:var(--hero-text);padding:18px 22px}
+  .dr-h .et{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--hero-accent)}
+  .dr-h h3{font-family:var(--font-head);font-weight:400;font-size:21px;margin:6px 0 3px}
+  .dr-h .sub{font-size:12.5px;color:var(--hero-muted)}
+  .dr-b{padding:18px 22px 40px}
+  .campo{display:grid;grid-template-columns:132px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .campo b{font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-top:2px}
+  .fechar{appearance:none;background:transparent;border:1px solid var(--hero-line);color:var(--hero-text);border-radius:8px;
+    padding:5px 11px;font-size:12px;cursor:pointer;float:right;font-family:inherit}
+
+  /* ---------- Nota ---------- */
+  .nota{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-bright);border-radius:0 12px 12px 0;padding:16px 20px;margin-top:26px}
+  .nota b.lbl{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+  .nota p{margin:0 0 8px;font-size:13px;line-height:1.6}
+  .nota p:last-child{margin-bottom:0}
+
+  @media (max-width:720px){ .wrap{padding:16px 14px 50px} .abas{padding:0 14px} .top{padding:14px} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="top-in">
+    <div class="mark"></div>
+    <div class="brandt"><strong>Obliant · CRM</strong><span>Protótipo de conceito — dados fictícios</span></div>
+    <div class="proto">
+      <label for="papel">Simular acesso como</label>
+      <select id="papel" onchange="setPapel(this.value)">
+        <option value="admin">Admin</option>
+        <option value="smb">Gestor SMB</option>
+        <option value="le">Gestor Large Enterprise</option>
+        <option value="aloc">Gestor Alocação</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="abas"><div class="abas-in" id="abas"></div></div>
+
+<div class="wrap" id="conteudo"></div>
+
+<div class="ov" id="ov" onclick="fechar()"></div>
+<aside class="drawer" id="drawer">
+  <div class="dr-h">
+    <button class="fechar" onclick="fechar()">Fechar</button>
+    <div class="et" id="drEt"></div>
+    <h3 id="drTit"></h3>
+    <div class="sub" id="drSub"></div>
+  </div>
+  <div class="dr-b" id="drB"></div>
+</aside>
+
+<script>
+// ===========================================================================
+//  Protótipo de CRM — Obliant
+//  Sem back-end: os dados são fictícios e vivem só nesta página.
+//  O seletor de papel simula o que cada gestor enxergaria. No sistema real
+//  a regra roda no banco, não na tela — aba escondida não é segurança.
+// ===========================================================================
+
+var HOJE = new Date(2026, 7, 11); // 11/08/2026
+
+var AREAS = {
+  entrada: {
+    nome: 'Entrada · Tráfego pago e site',
+    dono: 'Triagem — Admin',
+    sub: 'Tudo que chega por formulário cai aqui antes de virar negócio. A triagem confirma o destino sugerido pelo faturamento e direciona.',
+    papeis: ['admin'],
+    etapas: [
+      {id:'novo', nome:'Novo'},
+      {id:'contato', nome:'Em contato'},
+      {id:'direcionado', nome:'Direcionado', win:true},
+      {id:'descartado', nome:'Descartado', lose:true}
+    ]
+  },
+  smb: {
+    nome: 'Projeto SMB',
+    dono: 'Gestor SMB',
+    sub: 'Empresas com faturamento até R$ 500 milhões/ano. Ciclo mais curto, decisor com autonomia.',
+    papeis: ['admin','smb'],
+    etapas: [
+      {id:'qualificado', nome:'Qualificado'},
+      {id:'diagnostico', nome:'Diagnóstico'},
+      {id:'proposta', nome:'Proposta enviada'},
+      {id:'negociacao', nome:'Negociação'},
+      {id:'ganho', nome:'Ganho', win:true},
+      {id:'perdido', nome:'Perdido', lose:true}
+    ]
+  },
+  le: {
+    nome: 'Projeto Large Enterprise',
+    dono: 'Gestor Large Enterprise',
+    sub: 'Acima de R$ 500 milhões/ano. Ciclo longo, decisão por comitê, passagem por compras e jurídico.',
+    papeis: ['admin','le'],
+    etapas: [
+      {id:'qualificado', nome:'Qualificado'},
+      {id:'diagnostico', nome:'Diagnóstico'},
+      {id:'proposta', nome:'Proposta enviada'},
+      {id:'negociacao', nome:'Negociação'},
+      {id:'ganho', nome:'Ganho', win:true},
+      {id:'perdido', nome:'Perdido', lose:true}
+    ]
+  },
+  aloc: {
+    nome: 'Alocação',
+    dono: 'Gestor Alocação',
+    sub: 'Receita recorrente. O valor registrado é mensal, com duração e data de renovação — não o valor cheio do contrato.',
+    papeis: ['admin','aloc'],
+    etapas: [
+      {id:'qualificado', nome:'Qualificado'},
+      {id:'perfil', nome:'Perfil definido'},
+      {id:'apresentacao', nome:'Candidatos apresentados'},
+      {id:'negociacao', nome:'Negociação'},
+      {id:'ativo', nome:'Ativo', win:true},
+      {id:'perdido', nome:'Perdido', lose:true}
+    ]
+  }
+};
+
+var NEG = [
+  // --- Entrada ---
+  {id:1, area:'entrada', etapa:'novo', empresa:'Metalúrgica Vertentes', contato:'Rafael Prado', cargo:'Diretor de Operações', fat:'R$ 200 a 500 mi', origem:'pago', campanha:'pmo-terceirizado / exata', entrou:'2026-08-11', sugestao:'SMB', prox:'Primeiro contato', proxData:'2026-08-11'},
+  {id:2, area:'entrada', etapa:'novo', empresa:'Grupo Andrade Log', contato:'Camila Bueno', cargo:'Head de Projetos', fat:'Acima de R$ 500 mi', origem:'pago', campanha:'escritorio-de-projetos', entrou:'2026-08-10', sugestao:'Large Enterprise', prox:'Primeiro contato', proxData:'2026-08-11'},
+  {id:3, area:'entrada', etapa:'contato', empresa:'Nutrisul Alimentos', contato:'Diego Ramos', cargo:'Gerente de PMO', fat:'R$ 50 a 200 mi', origem:'site', campanha:'—', entrou:'2026-08-08', sugestao:'SMB', prox:'Reunião de triagem', proxData:'2026-08-12'},
+  {id:4, area:'entrada', etapa:'contato', empresa:'Óptima Serviços', contato:'Bruna Teles', cargo:'Analista', fat:'Até R$ 50 mi', origem:'pago', campanha:'gestao-de-projetos / ampla', entrou:'2026-08-06', sugestao:'SMB', prox:'Confirmar quem decide', proxData:'2026-08-11'},
+  {id:5, area:'entrada', etapa:'direcionado', empresa:'Cerâmica Bandeirante', contato:'Otávio Lins', cargo:'Diretor de TI', fat:'R$ 200 a 500 mi', origem:'pago', campanha:'pmo-terceirizado / exata', entrou:'2026-08-04', sugestao:'SMB', prox:'Entregue ao Gestor SMB', proxData:'2026-08-07'},
+  {id:6, area:'entrada', etapa:'descartado', empresa:'Estudante — TCC', contato:'—', cargo:'—', fat:'Até R$ 50 mi', origem:'pago', campanha:'o-que-e-pmo / ampla', entrou:'2026-08-05', sugestao:'—', motivo:'Sem perfil — pesquisa acadêmica', prox:'—', proxData:'—'},
+
+  // --- SMB ---
+  {id:10, area:'smb', etapa:'qualificado', empresa:'Cerâmica Bandeirante', contato:'Otávio Lins', cargo:'Diretor de TI', fat:'R$ 200 a 500 mi', origem:'pago', valor:86000, entrou:'2026-08-07', prox:'Agendar diagnóstico', proxData:'2026-08-13'},
+  {id:11, area:'smb', etapa:'diagnostico', empresa:'Tecnoplan Engenharia', contato:'Sérgio Maia', cargo:'Diretor de Operações', fat:'R$ 200 a 500 mi', origem:'indic', valor:120000, entrou:'2026-07-29', prox:'Apresentar leitura do portfólio', proxData:'2026-08-14'},
+  {id:12, area:'smb', etapa:'proposta', empresa:'Farmavita Distribuidora', contato:'Letícia Nunes', cargo:'Head de Projetos', fat:'R$ 50 a 200 mi', origem:'prosp', valor:74000, entrou:'2026-07-21', prox:'Follow-up da proposta', proxData:'2026-08-12'},
+  {id:13, area:'smb', etapa:'negociacao', empresa:'Rede Sulmar Varejo', contato:'André Falcão', cargo:'Diretor de Projetos', fat:'R$ 200 a 500 mi', origem:'indic', valor:96000, entrou:'2026-07-15', prox:'Ajustar escopo da fase 1', proxData:'2026-08-12'},
+  {id:14, area:'smb', etapa:'ganho', empresa:'Indústria Palmares', contato:'Marina Costa', cargo:'CFO', fat:'R$ 200 a 500 mi', origem:'indic', valor:88000, entrou:'2026-06-30', prox:'Kickoff', proxData:'2026-08-18'},
+  {id:15, area:'smb', etapa:'perdido', empresa:'Transportes Iguaçu', contato:'Paulo Renner', cargo:'Gerente', fat:'R$ 50 a 200 mi', origem:'prosp', valor:60000, entrou:'2026-07-02', motivo:'Optou por estruturar PMO interno', prox:'—', proxData:'—'},
+
+  // --- Large Enterprise ---
+  {id:20, area:'le', etapa:'qualificado', empresa:'Grupo Andrade Log', contato:'Camila Bueno', cargo:'Head de Projetos', fat:'Acima de R$ 500 mi', origem:'pago', valor:340000, entrou:'2026-08-09', prox:'Mapear quem decide', proxData:'2026-08-15'},
+  {id:21, area:'le', etapa:'diagnostico', empresa:'Vallenor Energia', contato:'Ricardo Amorim', cargo:'Diretor de Portfólio', fat:'Acima de R$ 500 mi', origem:'indic', valor:520000, entrou:'2026-06-18', prox:'Workshop com as 3 diretorias', proxData:'2026-08-20'},
+  {id:22, area:'le', etapa:'proposta', empresa:'Banco Aurora', contato:'Helena Prates', cargo:'Superintendente de PMO', fat:'Acima de R$ 500 mi', origem:'indic', valor:780000, entrou:'2026-05-26', prox:'Defesa em comitê', proxData:'2026-08-26'},
+  {id:23, area:'le', etapa:'negociacao', empresa:'Petroquímica Solaris', contato:'Fábio Werneck', cargo:'Gerente Geral', fat:'Acima de R$ 500 mi', origem:'prosp', valor:610000, entrou:'2026-04-14', prox:'Rodada com compras', proxData:'2026-08-13'},
+
+  // --- Alocação ---
+  {id:30, area:'aloc', etapa:'qualificado', empresa:'Seguros Boavista', contato:'Juliano Reis', cargo:'Gerente de TI', fat:'Acima de R$ 500 mi', origem:'indic', mensal:18000, meses:12, entrou:'2026-08-05', prox:'Levantar perfil técnico', proxData:'2026-08-13'},
+  {id:31, area:'aloc', etapa:'perfil', empresa:'Cooperativa Agrocampo', contato:'Elisa Marques', cargo:'Coordenadora de PMO', fat:'R$ 200 a 500 mi', origem:'prosp', mensal:14500, meses:6, entrou:'2026-07-24', prox:'Buscar candidatos', proxData:'2026-08-14'},
+  {id:32, area:'aloc', etapa:'apresentacao', empresa:'Vallenor Energia', contato:'Ricardo Amorim', cargo:'Diretor de Portfólio', fat:'Acima de R$ 500 mi', origem:'indic', mensal:22000, meses:12, entrou:'2026-07-10', prox:'Entrevista com 2 finalistas', proxData:'2026-08-12'},
+  {id:33, area:'aloc', etapa:'ativo', empresa:'Indústria Palmares', contato:'Marina Costa', cargo:'CFO', fat:'R$ 200 a 500 mi', origem:'indic', mensal:16000, meses:12, entrou:'2026-03-02', renovacao:'2026-09-30', prox:'Conversa de renovação', proxData:'2026-08-25'},
+  {id:34, area:'aloc', etapa:'perdido', empresa:'Logística Portomar', contato:'Tatiana Sá', cargo:'Head de Operações', fat:'R$ 50 a 200 mi', origem:'prosp', mensal:12000, meses:6, entrou:'2026-06-11', motivo:'Contratou direto no mercado', prox:'—', proxData:'—'}
+];
+
+var ORIGEM = { pago:['Tráfego pago','o-pago'], indic:['Indicação','o-indic'], prosp:['Prospecção','o-prosp'], site:['Site','o-site'] };
+
+var papel = 'admin';
+var abaAtual = 'entrada';
+
+function brl(n){ return 'R$ ' + Math.round(n).toLocaleString('pt-BR'); }
+function dias(iso){ if(!iso||iso==='—') return null; var p=iso.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return Math.round((HOJE-d)/86400000); }
+function dataBR(iso){ if(!iso||iso==='—') return '—'; var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function valorDe(n){ return n.mensal ? n.mensal*(n.meses||1) : (n.valor||0); }
+
+function areasVisiveis(){
+  var r=[]; for (var k in AREAS) { if (AREAS[k].papeis.indexOf(papel) >= 0) r.push(k); } return r;
+}
+
+function setPapel(p){
+  papel = p;
+  var vis = areasVisiveis();
+  if (vis.indexOf(abaAtual) < 0) abaAtual = vis[0];
+  render();
+}
+
+function irPara(a){ abaAtual = a; render(); }
+
+function render(){
+  var vis = areasVisiveis();
+  var ab = document.getElementById('abas'); ab.innerHTML='';
+  vis.forEach(function(k){
+    var n = NEG.filter(function(x){ return x.area===k; }).length;
+    var b = document.createElement('button');
+    b.className = (k===abaAtual?'on':'');
+    b.innerHTML = AREAS[k].nome + '<span class="cnt">' + n + '</span>';
+    b.onclick = function(){ irPara(k); };
+    ab.appendChild(b);
+  });
+  if (papel === 'admin') {
+    var b2 = document.createElement('button');
+    b2.className = (abaAtual==='consolidado'?'on':'');
+    b2.textContent = 'Consolidado';
+    b2.onclick = function(){ irPara('consolidado'); };
+    ab.appendChild(b2);
+  }
+  if (abaAtual === 'consolidado') renderConsolidado(); else renderBoard(abaAtual);
+}
+
+function renderBoard(ak){
+  var A = AREAS[ak];
+  var h = '<div class="areahead"><h2>'+A.nome+'</h2><span class="dono">Responsável: '+A.dono+'</span></div>';
+  h += '<p class="areasub">'+A.sub+'</p><div class="board">';
+  A.etapas.forEach(function(et){
+    var itens = NEG.filter(function(n){ return n.area===ak && n.etapa===et.id; });
+    var soma = itens.reduce(function(s,n){ return s + valorDe(n); }, 0);
+    h += '<div class="col'+(et.win?' win':'')+(et.lose?' lose':'')+'">';
+    h += '<div class="col-h"><div class="t"><b>'+et.nome+'</b><span class="n">'+itens.length+'</span></div>';
+    if (ak !== 'entrada' && soma > 0) h += '<div class="v">'+brl(soma)+'</div>';
+    h += '</div><div class="col-b">';
+    if (!itens.length) h += '<div class="vazio">vazio</div>';
+    itens.forEach(function(n){
+      var o = ORIGEM[n.origem] || ['—','o-site'];
+      var d = dias(n.entrou);
+      var alerta = (d !== null && d > 20 && !et.win && !et.lose);
+      h += '<button class="card" onclick="abrir('+n.id+')">';
+      h += '<span class="emp">'+n.empresa+'</span>';
+      h += '<span class="ct">'+n.contato+(n.cargo && n.cargo!=='—' ? ' · '+n.cargo : '')+'</span>';
+      if (ak === 'entrada') { if (n.sugestao && n.sugestao!=='—') h += '<span class="val">→ '+n.sugestao+'</span>'; }
+      else if (n.mensal) h += '<span class="val">'+brl(n.mensal)+'/mês · '+n.meses+'m</span>';
+      else if (n.valor) h += '<span class="val">'+brl(n.valor)+'</span>';
+      h += '<span class="foot"><span class="tagx '+o[1]+'">'+o[0]+'</span>';
+      if (d !== null) h += '<span class="idade'+(alerta?' alerta':'')+'">'+d+'d</span>';
+      h += '</span></button>';
+    });
+    h += '</div></div>';
+  });
+  h += '</div>';
+  h += notaDaArea(ak);
+  document.getElementById('conteudo').innerHTML = h;
+}
+
+function notaDaArea(ak){
+  if (ak === 'entrada') return '<div class="nota"><b class="lbl">Por que existe esta camada</b><p>Lead cru não deve entrar no funil comercial — polui a previsão e faz o gestor perder tempo com quem não tem perfil. Aqui ele é avaliado, e só o que tem perfil vira negócio.</p><p><b>O destino é sugerido automaticamente</b> pela faixa de faturamento informada no formulário: até R$ 500 milhões vai para SMB, acima vai para Large Enterprise. A triagem confirma ou corrige.</p><p>O número em cinza é <b>há quantos dias o lead está parado</b>. Passou de 20, fica laranja — em tráfego pago, lead frio custa o mesmo que lead quente e converte muito menos.</p></div>';
+  if (ak === 'aloc') return '<div class="nota"><b class="lbl">Por que alocação tem valor mensal</b><p>Alocação é receita recorrente. Se registrar o valor cheio do contrato, uma alocação de R$ 18 mil por 12 meses aparece como R$ 216 mil competindo com um projeto de R$ 86 mil que acontece uma vez — e a previsão perde o sentido.</p><p>Por isso o card mostra <b>valor mensal e duração</b>, e a etapa final é <b>Ativo</b>, não "Ganho": o contrato continua vivo, com data de renovação. Perder uma renovação dói mais do que não ganhar uma proposta nova, porque é receita que já era sua.</p></div>';
+  return '<div class="nota"><b class="lbl">Sobre as etapas</b><p>Usei <b>Ganho</b> e <b>Perdido</b> em vez de "Concluído". Os dois são conclusões — e um funil que junta os dois esconde exatamente o número que interessa, que é a taxa de conversão.</p><p>O <b>Perdido</b> guarda o motivo. Depois de vinte negócios perdidos, o padrão dos motivos vale mais que qualquer relatório: mostra se o problema é preço, timing, concorrente ou qualificação errada lá atrás.</p></div>';
+}
+
+function renderConsolidado(){
+  var abertas = NEG.filter(function(n){ return n.area!=='entrada' && ['ganho','perdido','ativo'].indexOf(n.etapa)<0; });
+  var previsto = abertas.reduce(function(s,n){ return s+valorDe(n); },0);
+  var ganhos = NEG.filter(function(n){ return n.etapa==='ganho'||n.etapa==='ativo'; });
+  var receita = ganhos.reduce(function(s,n){ return s+valorDe(n); },0);
+  var leads = NEG.filter(function(n){ return n.area==='entrada'; }).length;
+  var pagos = NEG.filter(function(n){ return n.origem==='pago'; }).length;
+
+  var h = '<div class="areahead"><h2>Consolidado</h2><span class="dono">Visível apenas para Admin e CEO</span></div>';
+  h += '<p class="areasub">Visão que ninguém mais tem: as três áreas somadas, mais o desempenho por origem.</p>';
+  h += '<div class="kpis">';
+  h += '<div class="kpi"><div class="k">Receita prevista</div><div class="v">'+brl(previsto)+'</div><div class="s">'+abertas.length+' negócios em aberto</div></div>';
+  h += '<div class="kpi"><div class="k">Fechado no período</div><div class="v">'+brl(receita)+'</div><div class="s">'+ganhos.length+' ganhos e ativos</div></div>';
+  h += '<div class="kpi"><div class="k">Leads na entrada</div><div class="v">'+leads+'</div><div class="s">aguardando triagem ou já direcionados</div></div>';
+  h += '<div class="kpi"><div class="k">Originados por mídia paga</div><div class="v">'+pagos+'</div><div class="s">de '+NEG.length+' registros</div></div>';
+  h += '</div>';
+
+  h += '<div class="tw"><table><thead><tr><th>Área</th><th>Em aberto</th><th class="num">Previsto</th><th>Ganhos</th><th class="num">Fechado</th></tr></thead><tbody>';
+  ['smb','le','aloc'].forEach(function(k){
+    var ab = NEG.filter(function(n){ return n.area===k && ['ganho','perdido','ativo'].indexOf(n.etapa)<0; });
+    var gn = NEG.filter(function(n){ return n.area===k && (n.etapa==='ganho'||n.etapa==='ativo'); });
+    h += '<tr><td><b>'+AREAS[k].nome+'</b></td><td>'+ab.length+'</td><td class="num">'+brl(ab.reduce(function(s,n){return s+valorDe(n);},0))+'</td><td>'+gn.length+'</td><td class="num">'+brl(gn.reduce(function(s,n){return s+valorDe(n);},0))+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  h += '<div style="height:22px"></div><div class="tw"><table><thead><tr><th>Origem</th><th>Registros</th><th class="num">Previsto</th><th class="num">Fechado</th></tr></thead><tbody>';
+  ['pago','indic','prosp','site'].forEach(function(o){
+    var t = NEG.filter(function(n){ return n.origem===o; });
+    var ab = t.filter(function(n){ return n.area!=='entrada' && ['ganho','perdido','ativo'].indexOf(n.etapa)<0; });
+    var gn = t.filter(function(n){ return n.etapa==='ganho'||n.etapa==='ativo'; });
+    h += '<tr><td><span class="tagx '+ORIGEM[o][1]+'">'+ORIGEM[o][0]+'</span></td><td>'+t.length+'</td><td class="num">'+brl(ab.reduce(function(s,n){return s+valorDe(n);},0))+'</td><td class="num">'+brl(gn.reduce(function(s,n){return s+valorDe(n);},0))+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  h += '<div class="nota"><b class="lbl">É esta tabela que responde o piloto de tráfego pago</b><p>Com a origem gravada em cada registro, o custo por lead e o custo por cliente saem sozinhos: investimento do mês dividido pelos leads da linha "Tráfego pago", e depois pelos negócios ganhos vindos dela.</p><p>Hoje, sem isso, essa conta é feita à mão — e por isso quase nunca é feita.</p></div>';
+
+  document.getElementById('conteudo').innerHTML = h;
+}
+
+function abrir(id){
+  var n = NEG.filter(function(x){ return x.id===id; })[0];
+  if (!n) return;
+  var A = AREAS[n.area];
+  var et = A.etapas.filter(function(e){ return e.id===n.etapa; })[0];
+  document.getElementById('drEt').textContent = A.nome + ' · ' + (et?et.nome:'');
+  document.getElementById('drTit').textContent = n.empresa;
+  document.getElementById('drSub').textContent = n.contato + (n.cargo && n.cargo!=='—' ? ' · ' + n.cargo : '');
+
+  var c = '';
+  function campo(k,v){ if(v===undefined||v===null||v==='') return; c += '<div class="campo"><b>'+k+'</b><span>'+v+'</span></div>'; }
+  campo('Empresa', n.empresa);
+  campo('Contato', n.contato);
+  campo('Cargo', n.cargo);
+  campo('Faturamento', n.fat);
+  if (n.area === 'entrada') {
+    campo('Destino sugerido', n.sugestao);
+    campo('Campanha', n.campanha);
+  } else if (n.mensal) {
+    campo('Valor mensal', brl(n.mensal));
+    campo('Duração', n.meses + ' meses');
+    campo('Valor total', brl(n.mensal*n.meses));
+    campo('Renovação', dataBR(n.renovacao));
+  } else {
+    campo('Valor', brl(n.valor||0));
+  }
+  campo('Origem', (ORIGEM[n.origem]||['—'])[0]);
+  campo('Entrou na etapa', dataBR(n.entrou) + (dias(n.entrou)!==null ? ' · há '+dias(n.entrou)+' dias' : ''));
+  campo('Próximo passo', n.prox);
+  campo('Data do próximo passo', dataBR(n.proxData));
+  campo('Motivo da perda', n.motivo);
+  document.getElementById('drB').innerHTML = c;
+
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('drawer').classList.add('on');
+}
+function fechar(){
+  document.getElementById('ov').classList.remove('on');
+  document.getElementById('drawer').classList.remove('on');
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') fechar(); });
+
+render();
+</script>
+</body>
+</html>
