@@ -127,6 +127,13 @@
   .card[draggable="true"]{cursor:grab;user-select:none;-webkit-user-select:none}
   .card[draggable="true"]:active{cursor:grabbing}
   .col-b .card:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .col.alvo{border-color:var(--accent);background:rgba(188,216,72,.10)}
+
+  .setas{display:flex;gap:5px;margin-top:8px}
+  .seta{flex:1;appearance:none;font-family:inherit;font-size:15px;line-height:1;padding:5px 0;border-radius:6px;cursor:pointer;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .seta:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--panel)}
+  .seta:disabled{opacity:.3;cursor:default}
 
   /* ---------- Nota ---------- */
   .nota{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent-bright);border-radius:0 12px 12px 0;padding:16px 20px;margin-top:26px}
@@ -363,6 +370,11 @@ function renderBoard(ak){
       else if (n.valor) h += '<span class="val">'+brl(n.valor)+'</span>';
       h += '<span class="foot"><span class="tagx '+o[1]+'">'+o[0]+'</span>';
       if (d !== null) h += '<span class="idade'+(alerta?' alerta':'')+'">'+d+'d</span>';
+      h += '</span>';
+      var idx = A.etapas.map(function(e){ return e.id; }).indexOf(n.etapa);
+      h += '<span class="setas">';
+      h += '<button class="seta" title="Voltar etapa"'+(idx<=0?' disabled':'')+' onclick="event.stopPropagation();mover('+n.id+',\''+(idx>0?A.etapas[idx-1].id:'')+'\')">&lsaquo;</button>';
+      h += '<button class="seta" title="Avançar etapa"'+(idx>=A.etapas.length-1?' disabled':'')+' onclick="event.stopPropagation();mover('+n.id+',\''+(idx<A.etapas.length-1?A.etapas[idx+1].id:'')+'\')">&rsaquo;</button>';
       h += '</span></div>';
     });
     h += '</div></div>';
@@ -566,10 +578,20 @@ function pegar(ev, id){
   arrastando = id;
   if (ev.dataTransfer) { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); }
 }
-function largar(){ setTimeout(function(){ arrastando = null; }, 50); }
-function permitir(ev){ ev.preventDefault(); if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'; }
+function largar(){
+  document.querySelectorAll('.col.alvo').forEach(function(c){ c.classList.remove('alvo'); });
+  setTimeout(function(){ arrastando = null; }, 50);
+}
+function permitir(ev){
+  ev.preventDefault();
+  if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+  var col = ev.currentTarget;
+  document.querySelectorAll('.col.alvo').forEach(function(c){ if (c !== col) c.classList.remove('alvo'); });
+  col.classList.add('alvo');
+}
 function soltar(ev, etapa){
   ev.preventDefault();
+  document.querySelectorAll('.col.alvo').forEach(function(c){ c.classList.remove('alvo'); });
   var id = arrastando;
   if (!id && ev.dataTransfer) id = Number(ev.dataTransfer.getData('text/plain'));
   arrastando = null;
