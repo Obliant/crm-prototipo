@@ -141,6 +141,13 @@
   .negl span{font-size:11.5px;color:var(--muted)}
   .negl .vl{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--accent);white-space:nowrap}
   .negl .vl.bloq{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--font-body);font-size:11.5px}
+  .negl .mot{display:block;font-size:11px;color:var(--warn);margin-top:2px;font-style:italic}
+  .resumo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .rc{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .rc.largo{grid-column:1 / -1}
+  .rc .rk{display:block;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .rc .rv{display:block;font-family:var(--font-mono);font-size:15px;font-weight:700;margin-top:3px}
+  .rc .rv.acc{color:var(--accent)}
   .ativ{border-left:2px solid var(--line);padding:0 0 14px 14px;margin-bottom:2px;position:relative}
   .ativ:before{content:"";position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--accent-bright);border:2px solid var(--paper)}
   .ativ .ah{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
@@ -297,7 +304,7 @@ var NEG = [
 
 var ORIGEM = { pago:['Tráfego pago','o-pago'], indic:['Indicação','o-indic'], prosp:['Prospecção','o-prosp'], site:['Site','o-site'] };
 var FAIXAS = ['Até R$ 50 mi','R$ 50 a 200 mi','R$ 200 a 500 mi','Acima de R$ 500 mi'];
-var TIPOS = ['Ligação','Reunião','E-mail','Proposta','Visita','Nota interna'];
+var TIPOS = ['Ligação','Reunião','E-mail','Proposta','Visita','Entrega','Marco do projeto','Nota interna'];
 
 // Histórico por empresa — compartilhado entre as áreas, de propósito.
 var ATIV = [
@@ -499,17 +506,42 @@ function abrirEmpresa(nome){
   nomes.forEach(function(n){ c += '<div class="campo"><b>'+n+'</b><span>'+(e.contatos[n]||'—')+'</span></div>'; });
   c += '</div>';
 
-  c += '<div class="bloco"><b class="bt">Negócios</b>';
-  e.negocios.forEach(function(n){
-    var A = AREAS[n.area];
-    var et = A.etapas.filter(function(x){ return x.id===n.etapa; })[0];
-    var podeVer = vejoArea(n.area);
-    var val = '—';
-    if (podeVer) { val = n.mensal ? brl(n.mensal)+'/mês' : (n.valor ? brl(n.valor) : '—'); }
-    c += '<div class="negl"><div><b>'+A.nome+'</b><span>'+(et?et.nome:'')+'</span></div>';
-    c += '<span class="vl'+(podeVer?'':' bloq')+'">'+(podeVer ? val : 'outra área')+'</span></div>';
-  });
-  c += '</div>';
+  // --- Resumo da conta ---
+  var fechados = e.negocios.filter(function(n){ return n.etapa==='ganho' || n.etapa==='ativo'; });
+  var perdidos = e.negocios.filter(function(n){ return n.etapa==='perdido'; });
+  var andamento = e.negocios.filter(function(n){ return ['ganho','ativo','perdido','direcionado','descartado'].indexOf(n.etapa) < 0; });
+  var desde = null;
+  fechados.forEach(function(n){ if (!desde || n.entrou < desde) desde = n.entrou; });
+
+  c += '<div class="bloco"><b class="bt">A conta em números</b><div class="resumo">';
+  c += '<div class="rc"><span class="rk">Cliente desde</span><span class="rv">'+(desde ? dataBR(desde) : '—')+'</span></div>';
+  c += '<div class="rc"><span class="rk">Já realizados</span><span class="rv">'+fechados.length+'</span></div>';
+  c += '<div class="rc"><span class="rk">Em andamento</span><span class="rv">'+andamento.length+'</span></div>';
+  c += '<div class="rc"><span class="rk">Não fechados</span><span class="rv">'+perdidos.length+'</span></div>';
+  if (papel === 'admin') {
+    var tot = fechados.reduce(function(s,n){ return s + valorDe(n); }, 0);
+    c += '<div class="rc largo"><span class="rk">Receita realizada</span><span class="rv acc">'+brl(tot)+'</span></div>';
+  }
+  c += '</div></div>';
+
+  function listaNeg(titulo, arr, vazio){
+    if (!arr.length) { return '<div class="bloco"><b class="bt">'+titulo+'</b><p class="vaziop">'+vazio+'</p></div>'; }
+    var s = '<div class="bloco"><b class="bt">'+titulo+'</b>';
+    arr.forEach(function(n){
+      var A = AREAS[n.area];
+      var et = A.etapas.filter(function(x){ return x.id===n.etapa; })[0];
+      var podeVer = vejoArea(n.area);
+      var val = podeVer ? (n.mensal ? brl(n.mensal)+'/mês · '+n.meses+'m' : (n.valor ? brl(n.valor) : '—')) : 'outra área';
+      s += '<div class="negl"><div><b>'+A.nome+'</b><span>'+(et?et.nome:'')+' · '+dataBR(n.entrou)+'</span>';
+      if (n.motivo) s += '<span class="mot">'+n.motivo+'</span>';
+      s += '</div><span class="vl'+(podeVer?'':' bloq')+'">'+val+'</span></div>';
+    });
+    return s + '</div>';
+  }
+
+  c += listaNeg('Trabalho já realizado', fechados, 'Ainda não fechamos nada com esta empresa.');
+  c += listaNeg('Em andamento', andamento, 'Nenhum negócio aberto no momento.');
+  if (perdidos.length) c += listaNeg('Não fechados', perdidos, '');
 
   c += '<div class="bloco"><b class="bt">Histórico</b>';
   c += '<button class="btn primario" style="width:100%;margin-bottom:12px" onclick="formAtiv(\''+nome.replace(/'/g,"\\'")+'\')">+ Registrar contato</button>';
